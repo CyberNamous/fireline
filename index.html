@@ -73,11 +73,21 @@
           <div class="topbar-right">
             <span class="connection" id="connection">Connecting</span
             ><time id="clock">--:--:--</time
+            ><button
+              class="bell"
+              id="notify-button"
+              aria-label="Notifications"
+              aria-expanded="false"
+              aria-controls="notify-panel"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9" /><path d="M10 20a2.2 2.2 0 0 0 4 0" /></svg
+              ><span class="bell-badge" id="notify-badge" hidden>0</span></button
             ><button class="avatar" id="account-shortcut" aria-label="Account and recovery">
               VC
             </button>
           </div>
         </header>
+        <section class="notify-panel" id="notify-panel" hidden aria-label="Notifications"></section>
         <main id="main" tabindex="-1">
           <section class="page-heading">
             <div>
