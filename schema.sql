@@ -1,4 +1,4 @@
--- Initial schema. All currency is integer game dollars; all times Unix milliseconds.
+
 PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS players (
  id TEXT PRIMARY KEY, name TEXT NOT NULL CHECK(length(name) BETWEEN 2 AND 40),
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS volunteers (
  created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS volunteers_owner ON volunteers(player_id);
--- There is intentionally NO table for generated / unattended incidents.
+
 CREATE TABLE IF NOT EXISTS participations (
  id TEXT PRIMARY KEY, player_id TEXT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
  incident_id TEXT NOT NULL, incident_json TEXT NOT NULL,
