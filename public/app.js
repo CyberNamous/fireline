@@ -318,8 +318,20 @@ function settings() {
     };
   };
 }
+function crewEffects(key, crew) {
+  const fx = state.catalog.roleEffects;
+  let bonus = 0;
+  for (const [role, b] of Object.entries(fx.bonus))
+    if (b.keys.includes(key))
+      bonus += Math.min(b.cap, crew.filter((v) => v.role === role).length * b.each);
+  return {
+    bonus,
+    travel: crew.some((v) => v.role === state.catalog.roles.driver.label) ? fx.driverTravel : 1
+  };
+}
 function estimate(incident, vehicle, crew) {
   const spec = state.catalog.vehicles[vehicle.type],
+    fx = crewEffects(incident.key, crew),
     rad = (x) => (x * Math.PI) / 180,
     org = state.organization;
   const h =
@@ -331,7 +343,7 @@ function estimate(incident, vehicle, crew) {
   const skill = crew.length ? crew.reduce((a, v) => a + v.skill, 0) / crew.length : 0;
   return {
     cost: spec.cost + incident.severity * 25 + Math.ceil(km * 4),
-    duration: incident.duration + Math.round(((km / spec.speed) * 3600000) / 12),
+    duration: incident.duration + Math.round((((km / spec.speed) * 3600000) / 12) * fx.travel),
     chance: Math.round(
       Math.min(
         0.98,
@@ -339,7 +351,8 @@ function estimate(incident, vehicle, crew) {
           skill * 0.045 -
           (incident.severity - 1) * 0.045 +
           (spec.fit?.[incident.key] ?? 0) +
-          (incident.water ? Math.min(0.12, spec.liters / 100000) : 0)
+          (incident.water ? Math.min(0.12, spec.liters / 100000) : 0) +
+          fx.bonus
       ) * 100
     )
   };
@@ -416,6 +429,26 @@ function planDispatch(id) {
     );
   };
 }
+function recruitModal() {
+  const roles = Object.entries(state.catalog.roles);
+  openModal(
+    'Welcome another volunteer',
+    `<form id="recruit-form" class="modal-body form-stack"><fieldset class="crew-picker"><legend>Choose a role</legend>${roles
+      .map(
+        ([key, r], i) =>
+          `<label class="crew-option"><input type="radio" name="role" value="${key}" ${i === 0 ? 'checked' : ''}><span><strong>${E(r.label)} · ${money(r.cost)}</strong><small>${E(r.description)}</small></span></label>`
+      )
+      .join('')}</fieldset><p class="fine-print">Recruits start at skill 1 and need a free roster position. This one-time game-currency transaction must leave a ₱400 response reserve. All costs are validated on the server.</p><button class="button primary full" type="submit" id="confirm-org">Recruit volunteer</button></form>`
+  );
+  $('#recruit-form').onsubmit = (e) => {
+    e.preventDefault();
+    action(
+      'organization',
+      { action: 'recruit', role: new FormData(e.currentTarget).get('role') },
+      'Volunteer recruited.'
+    );
+  };
+}
 function confirmOrg(data, title, description, label) {
   openModal(
     title,
@@ -433,12 +466,7 @@ $('#view').addEventListener('click', (e) => {
   }
   if (b.dataset.dispatch) planDispatch(b.dataset.dispatch);
   if (b.dataset.orgAction === 'recruit')
-    confirmOrg(
-      { action: 'recruit' },
-      'Welcome another volunteer',
-      `Recruit an available skill-1 firefighter for ${money(state.catalog.recruitCost)}. A roster position is required.`,
-      `Recruit · ${money(state.catalog.recruitCost)}`
-    );
+    recruitModal();
   if (b.dataset.orgAction === 'upgrade')
     confirmOrg(
       { action: 'upgrade' },
