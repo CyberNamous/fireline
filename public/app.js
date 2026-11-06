@@ -62,6 +62,11 @@ function accept(next) {
   state = next;
   offset = next.serverTime - Date.now();
   render();
+  try {
+    scanNotifications();
+  } catch {
+    /* notifications are best-effort and never block the game */
+  }
 }
 function selectedIncident() {
   return (
@@ -532,6 +537,281 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', () => {
   if (state) refresh();
 });
+// ---------- Notification center ----------
+// Built from game-state changes, kept per player in this browser, and never needed to play.
+const NOTE_KIND = {
+  call: { filter: 'calls', tag: 'CALL' },
+  result: { filter: 'results', tag: 'RESULT' },
+  unlock: { filter: 'alerts', tag: 'UNLOCK' },
+  locked: { filter: 'alerts', tag: 'LEVEL REQUIRED' },
+  aid: { filter: 'alerts', tag: 'MUTUAL AID' },
+  train: { filter: 'alerts', tag: 'TRAINING' },
+  low: { filter: 'alerts', tag: 'FUNDS' },
+  info: { filter: 'alerts', tag: 'INFO' }
+};
+const KIND_NAME = {
+  ambulance: 'an ambulance',
+  engine: 'an engine',
+  brush: 'a wildland unit',
+  rescue: 'a rescue unit',
+  tanker: 'a water tender',
+  aerial: 'an aerial'
+};
+let notes = [],
+  noteMeta = null,
+  noteOwner = null,
+  noteFilter = 'all';
+function noteStorage(write) {
+  try {
+    const key = 'fireline:notes:' + noteOwner;
+    if (write) localStorage.setItem(key, JSON.stringify({ v: 1, notes, meta: noteMeta }));
+    else {
+      const raw = JSON.parse(localStorage.getItem(key) || 'null');
+      return raw?.v === 1 ? raw : null;
+    }
+  } catch {
+    return null;
+  }
+}
+function scanNotifications() {
+  const s = state,
+    t = s.serverTime;
+  if (noteOwner !== s.player.id) {
+    noteOwner = s.player.id;
+    const saved = noteStorage(false);
+    notes = saved?.notes ?? [];
+    noteMeta = saved?.meta ?? null;
+  }
+  const level = s.catalog.progression.level,
+    kinds = new Set(s.vehicles.map((v) => s.catalog.vehicles[v.type]?.kind)),
+    sig = [...kinds].sort().join(','),
+    fresh = !noteMeta;
+  noteMeta ??= { level, seen: [], done: [], training: [], low: false };
+  const m = noteMeta;
+  let loud = false;
+  const add = (n) => {
+    if (notes.some((x) => x.id === n.id)) return;
+    notes.unshift({ ...n, at: n.at ?? t, read: false });
+    if (n.urgent) loud = true;
+  };
+  if (fresh)
+    add({
+      id: 'welcome',
+      type: 'info',
+      tone: 'info',
+      title: 'Notification center is on',
+      body: 'New calls, results, unlocks, training and equipment needs will show up here.'
+    });
+  if (level > m.level) {
+    const names = Object.values(s.catalog.vehicles)
+      .filter((v) => v.minLevel > m.level && v.minLevel <= level)
+      .map((v) => v.name);
+    add({
+      id: `level:${level}`,
+      type: 'unlock',
+      tone: 'good',
+      title: `Level ${level} reached`,
+      body: names.length ? `Now available: ${names.join(', ')}.` : 'New response capability unlocked.',
+      go: 'fleet'
+    });
+    m.level = level;
+  }
+  for (const p of s.history) {
+    if (p.status !== 'completed' || m.done.includes(p.id)) continue;
+    m.done.push(p.id);
+    if (!fresh)
+      add({
+        id: `done:${p.id}`,
+        type: 'result',
+        tone: p.outcome === 'successful' ? 'good' : 'warn',
+        title: `${p.incident.name} ${p.outcome === 'successful' ? 'resolved' : 'contained'}`,
+        body: `+${money(p.reward)} · +${p.xp} XP · ${p.incident.location}`,
+        at: p.completedAt,
+        go: 'history'
+      });
+  }
+  let calls = 0,
+    extra = 0;
+  for (const i of s.incidents) {
+    if (m.seen.includes(i.id)) continue;
+    m.seen.push(i.id);
+    if (fresh) continue;
+    const needs = i.types.map((k) => KIND_NAME[k] ?? k).join(' or ');
+    if (level < i.minLevel)
+      add({
+        id: `lock:${i.key}:${level}`,
+        type: 'locked',
+        tone: 'warn',
+        title: `${i.name} needs level ${i.minLevel}`,
+        body: `You are level ${level}. Keep responding to earn XP and unlock it.`,
+        go: 'dispatch'
+      });
+    else if (!i.types.some((k) => kinds.has(k)))
+      add({
+        id: `aid:${i.key}:${sig}`,
+        type: 'aid',
+        tone: 'danger',
+        title: `Mutual aid needed: ${i.name}`,
+        body: `You have no suitable apparatus. This call needs ${needs}.`,
+        go: 'fleet'
+      });
+    else if (i.severity >= 2) {
+      if (calls++ < 3)
+        add({
+          id: `call:${i.id}`,
+          type: 'call',
+          tone: i.severity >= 3 ? 'danger' : 'info',
+          urgent: i.severity >= 3,
+          title: `${i.severity >= 3 ? 'Major call' : 'New call'}: ${i.name}`,
+          body: `${i.location} · ${i.crew} crew · ${i.category}`,
+          incident: i.id
+        });
+      else extra++;
+    }
+  }
+  if (extra)
+    add({
+      id: `more:${Math.floor(t / 60000)}`,
+      type: 'call',
+      tone: 'info',
+      title: `${extra} more call${extra > 1 ? 's' : ''} waiting`,
+      body: 'Open Dispatch to see the full incident feed.',
+      go: 'dispatch'
+    });
+  const training = s.volunteers.filter((v) => v.training_until > t).map((v) => v.id);
+  for (const id of m.training) {
+    const v = s.volunteers.find((x) => x.id === id);
+    if (v && !training.includes(id) && !fresh)
+      add({
+        id: `train:${id}:${v.skill}`,
+        type: 'train',
+        tone: 'good',
+        title: `${v.name} finished training`,
+        body: `Now skill ${v.skill}.`,
+        go: 'volunteers'
+      });
+  }
+  m.training = training;
+  const low = s.player.balance < s.catalog.responseReserve;
+  if (low && !m.low && !fresh)
+    add({
+      id: `low:${Math.floor(t / 3600000)}`,
+      type: 'low',
+      tone: 'warn',
+      title: 'Funds are low',
+      body: `Your balance is under the ${money(s.catalog.responseReserve)} reserve, so purchases are blocked until you earn more.`,
+      go: 'finances'
+    });
+  m.low = low;
+  m.seen = m.seen.slice(-200);
+  m.done = m.done.slice(-150);
+  notes = notes.slice(0, 60);
+  noteStorage(true);
+  if (loud && !fresh && $('#notify-panel').hidden) {
+    toast('Major call received. Check notifications.');
+    navigator.vibrate?.(120);
+  }
+  paintNotifications();
+}
+const noteAgo = (at) => {
+  const d = Math.max(0, serverNow() - at);
+  return d < 60000
+    ? 'just now'
+    : d < 3600000
+      ? `${Math.floor(d / 60000)}m ago`
+      : d < 86400000
+        ? `${Math.floor(d / 3600000)}h ago`
+        : `${Math.floor(d / 86400000)}d ago`;
+};
+function paintNotifications() {
+  const unread = notes.filter((n) => !n.read).length,
+    badge = $('#notify-badge');
+  badge.hidden = !unread;
+  badge.textContent = unread > 9 ? '9+' : unread;
+  $('#notify-button').setAttribute(
+    'aria-label',
+    unread ? `Notifications, ${unread} unread` : 'Notifications'
+  );
+  document.title = (unread ? `(${unread}) ` : '') + 'Fireline · Volunteer Chief';
+  if ($('#notify-panel').hidden) return;
+  const shown = notes.filter((n) => noteFilter === 'all' || NOTE_KIND[n.type].filter === noteFilter);
+  const chips = [
+    ['all', 'All'],
+    ['calls', 'Calls'],
+    ['results', 'Results'],
+    ['alerts', 'Alerts']
+  ]
+    .map(
+      ([k, label]) =>
+        `<button class="notify-chip ${noteFilter === k ? 'active' : ''}" data-notefilter="${k}" type="button">${label}</button>`
+    )
+    .join('');
+  $('#notify-panel').innerHTML =
+    `<div class="notify-head"><div><h2>Notifications</h2><small>${unread ? `${unread} unread` : 'All caught up'}</small></div><div class="notify-tools"><button class="notify-tool" id="notes-readall" type="button">Mark read</button><button class="notify-tool" id="notes-clear" type="button">Clear</button><button class="notify-tool" id="notes-close" type="button" aria-label="Close notifications">✕</button></div></div><div class="notify-tabs">${chips}</div><ul class="notify-list">${
+      shown.length
+        ? shown
+            .map(
+              (n) =>
+                `<li><button class="notify-item tone-${n.tone} ${n.read ? '' : 'unread'}" data-note="${E(n.id)}" type="button"><span class="notify-dot"></span><span class="notify-text"><span class="notify-top"><b>${E(n.title)}</b><time>${noteAgo(n.at)}</time></span><span class="notify-body">${E(n.body)}</span><span class="notify-tag">${NOTE_KIND[n.type].tag}${n.go || n.incident ? ' · TAP TO OPEN' : ''}</span></span></button></li>`
+            )
+            .join('')
+        : '<li class="notify-empty">Nothing here yet. New calls, results and unlocks will appear as they happen.</li>'
+    }</ul>`;
+}
+function setNotifyPanel(open) {
+  const panel = $('#notify-panel');
+  if (!open && !panel.hidden) {
+    notes.forEach((n) => (n.read = true));
+    noteStorage(true);
+  }
+  panel.hidden = !open;
+  $('#notify-button').setAttribute('aria-expanded', String(open));
+  paintNotifications();
+}
+function goTo(next, incidentId) {
+  view = UI.HEADINGS[next] ? next : 'dispatch';
+  if (location.hash !== '#' + view) location.hash = view;
+  else render(true);
+  if (incidentId && view === 'dispatch') selectIncident(incidentId);
+}
+$('#notify-button').onclick = (e) => {
+  e.stopPropagation();
+  setNotifyPanel($('#notify-panel').hidden);
+};
+$('#notify-panel').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.notefilter) {
+    noteFilter = b.dataset.notefilter;
+    paintNotifications();
+  } else if (b.id === 'notes-readall') {
+    notes.forEach((n) => (n.read = true));
+    noteStorage(true);
+    paintNotifications();
+  } else if (b.id === 'notes-clear') {
+    notes = notes.filter((n) => NOTE_KIND[n.type].filter !== noteFilter && noteFilter !== 'all');
+    noteStorage(true);
+    paintNotifications();
+  } else if (b.id === 'notes-close') setNotifyPanel(false);
+  else if (b.dataset.note) {
+    const n = notes.find((x) => x.id === b.dataset.note);
+    if (!n) return;
+    n.read = true;
+    setNotifyPanel(false);
+    if (n.incident || n.go) goTo(n.go ?? 'dispatch', n.incident);
+  }
+});
+document.addEventListener('click', () => {
+  if (!$('#notify-panel').hidden) setNotifyPanel(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !$('#notify-panel').hidden) {
+    setNotifyPanel(false);
+    $('#notify-button').focus();
+  }
+});
+
 async function start() {
   try {
     accept(await api('state'));
