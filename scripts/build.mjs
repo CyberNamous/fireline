@@ -2,7 +2,7 @@ import { rm, mkdir, cp, copyFile, readdir, readFile } from 'node:fs/promises';
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist/geography', { recursive: true });
 await copyFile('index.html', 'dist/index.html');
-await cp('public', 'dist/public/assets', { recursive: true });
+await cp('public', 'dist/public/assets/...', { recursive: true });
 await copyFile('geography/district.geojson', 'dist/geography/district.geojson');
 // Fail the build on any broken local HTML/CSS asset reference.
 const html = await readFile('index.html', 'utf8');
