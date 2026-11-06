@@ -1,7 +1,7 @@
 import { one, stmt, mutate, ledgerWrite } from './database.js';
 import {
   VEHICLES,
-  RECRUIT_COST,
+  ROLES,
   RESPONSE_RESERVE,
   capacities,
   stationUpgradeCost,
@@ -56,8 +56,10 @@ export async function organizationAction(env, player, request, data) {
     );
     const name =
       FIRST[n.n % FIRST.length] + ' ' + LAST[Math.floor(n.n / FIRST.length + n.n) % LAST.length];
-    amount = RECRUIT_COST;
-    description = `Volunteer recruitment · ${name}`;
+    const role = ROLES[data.role ?? 'firefighter'];
+    requireThat(role, 'Choose a valid crew role.');
+    amount = role.cost;
+    description = `Volunteer recruitment · ${name} (${role.label})`;
     operation = 'recruit';
     where = '(SELECT COUNT(*) FROM volunteers WHERE player_id=?)<?';
     args = [player.id, cap.volunteers];
@@ -69,7 +71,7 @@ export async function organizationAction(env, player, request, data) {
         entityId,
         player.id,
         name,
-        'Firefighter',
+        role.label,
         t,
         ...params
       )

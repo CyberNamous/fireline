@@ -180,6 +180,46 @@ export const VEHICLES = {
   }
 };
 export const RECRUIT_COST = 650;
+// Crew roles chosen at recruitment. The stored role is the label, so the starting roster matches too.
+export const ROLES = {
+  firefighter: {
+    label: 'Firefighter',
+    cost: RECRUIT_COST,
+    description: 'Reliable frontline crew. No special bonus, and the cheapest to recruit.'
+  },
+  driver: {
+    label: 'Driver / operator',
+    cost: 750,
+    description: 'Gets the apparatus there faster: 10% shorter travel time when on the crew.'
+  },
+  paramedic: {
+    label: 'Paramedic',
+    cost: 900,
+    description: '+5% success on medical and trauma calls (up to +8% per response).'
+  },
+  rescue: {
+    label: 'Rescue technician',
+    cost: 850,
+    description: '+4% success on collisions and hazardous spills (up to +8% per response).'
+  }
+};
+export const ROLE_EFFECTS = {
+  driverTravel: 0.9,
+  bonus: {
+    Paramedic: { keys: ['medical', 'trauma'], each: 0.05, cap: 0.08 },
+    'Rescue technician': { keys: ['collision', 'hazmat'], each: 0.04, cap: 0.08 }
+  }
+};
+export function crewEffects(eventKey, crew) {
+  let bonus = 0;
+  for (const [role, b] of Object.entries(ROLE_EFFECTS.bonus))
+    if (b.keys.includes(eventKey))
+      bonus += Math.min(b.cap, crew.filter((v) => v.role === role).length * b.each);
+  return {
+    bonus,
+    travel: crew.some((v) => v.role === ROLES.driver.label) ? ROLE_EFFECTS.driverTravel : 1
+  };
+}
 // Capital spending cannot strand a new department without response funds.
 export const RESPONSE_RESERVE = 400;
 export const stationUpgradeCost = (level) => 4000 * level;
@@ -191,7 +231,8 @@ export function responseEstimate(event, vehicle, crew, organization) {
   const spec = VEHICLES[vehicle.type],
     km = distanceKm(organization, event);
   const average = crew.reduce((sum, v) => sum + v.skill, 0) / crew.length;
-  const travelMs = Math.round(((km / spec.speed) * 3600000) / 12); // simulation is 12x travel speed
+  const effects = crewEffects(event.key, crew);
+  const travelMs = Math.round((((km / spec.speed) * 3600000) / 12) * effects.travel); // simulation is 12x travel speed
   const duration = event.duration + travelMs;
   const cost = spec.cost + event.severity * 25 + Math.ceil(km * 4);
   const chance = Math.min(
@@ -200,7 +241,8 @@ export function responseEstimate(event, vehicle, crew, organization) {
       average * 0.045 -
       (event.severity - 1) * 0.045 +
       (spec.fit?.[event.key] ?? 0) +
-      (event.water ? Math.min(0.12, spec.liters / 100000) : 0)
+      (event.water ? Math.min(0.12, spec.liters / 100000) : 0) +
+      effects.bonus
   );
   return { distance: Math.round(km * 10) / 10, duration, cost, chance: Math.round(chance * 100) };
 }
@@ -220,6 +262,8 @@ export function catalog(player, organization) {
   return {
     vehicles: VEHICLES,
     recruitCost: RECRUIT_COST,
+    roles: ROLES,
+    roleEffects: ROLE_EFFECTS,
     responseReserve: RESPONSE_RESERVE,
     stationUpgradeCost: stationUpgradeCost(organization.station_level),
     capacities: capacities(organization.station_level),
