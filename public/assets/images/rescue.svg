@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="170" viewBox="0 0 360 170" role="img" aria-label="RESCUE apparatus side elevation">
+ <defs><linearGradient id="paint" x2="0" y2="1"><stop stop-color="#ded5b9"/><stop offset="1" stop-color="#7d3030"/></linearGradient></defs>
+ <ellipse cx="177" cy="140" rx="155" ry="9" fill="#000" opacity=".2"/>
+ <g fill="url(#paint)" stroke="#301f23" stroke-width="2"><rect x="22" y="52" width="155" height="65" rx="5"/><path d="M177 117V49h62l25 24v44Z"/><path d="M264 78h38l23 20v19h-61Z"/></g>
+ <path d="M188 57h44l21 20h-65Z" fill="#233e46" stroke="#aac4c6" stroke-width="2"/>
+ <rect x="22" y="95" width="303" height="9" fill="#e8dbc3"/>
+ <g fill="#6d7780" stroke="#b8b9af"><rect x="33" y="65" width="41" height="25" rx="2"/><rect x="82" y="65" width="41" height="25" rx="2"/><rect x="132" y="65" width="32" height="25" rx="2"/></g>
+ <g stroke="#b8b9af" stroke-width="2"><path d="M35 72h37m-37 6h37m-37 6h37M84 72h37m-37 6h37m-37 6h37M134 72h28m-28 6h28m-28 6h28"/><path d="M27 42h143M30 35h136M40 35v7m20-7v7m20-7v7m20-7v7m20-7v7m20-7v7m20-7v7"/></g>
+ <rect x="200" y="43" width="32" height="7" rx="2" fill="#ee604d"/><rect x="313" y="96" width="13" height="9" fill="#f4e7b0"/>
+ <rect x="17" y="114" width="315" height="9" rx="3" fill="#9ba5a2"/>
+ <g fill="#1a2028" stroke="#0c1116" stroke-width="4"><circle cx="70" cy="123" r="19"/><circle cx="270" cy="123" r="19"/></g>
+ <g fill="#a6afb0" stroke="#3e4e57" stroke-width="4"><circle cx="70" cy="123" r="10"/><circle cx="270" cy="123" r="10"/></g>
+ <text x="200" y="94" fill="#fff1d7" font-family="sans-serif" font-size="9" font-weight="700">RESCUE</text><path d="M186 83v26M252 82v27" stroke="#722f2d"/>
+ </svg>

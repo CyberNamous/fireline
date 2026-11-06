@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="180" viewBox="0 0 160 180" role="img" aria-label="Fireline volunteer department insignia">
+ <path d="M80 5 147 29v64c0 37-67 79-67 79S13 130 13 93V29Z" fill="#202b30" stroke="#e8bf77" stroke-width="3"/>
+ <path d="M80 15 137 36v56c0 29-57 66-57 66S23 121 23 92V36Z" fill="none" stroke="#e8bf77" opacity=".35"/>
+ <path d="M66 58h28v17h20v27H94v20H66v-20H46V75h20Z" fill="#d25442"/><path d="M78 66h4v47h-4ZM56 87h48v4H56Z" fill="#f3dbb5"/>
+ <text x="80" y="46" text-anchor="middle" font-size="12" font-family="sans-serif" font-weight="700" letter-spacing="2" fill="#e8bf77">FIRELINE</text>
+ <text x="80" y="142" text-anchor="middle" font-size="10" font-family="sans-serif" letter-spacing="1.5" fill="#e8bf77">VOLUNTEER</text></svg>
