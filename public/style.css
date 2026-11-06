@@ -1317,7 +1317,8 @@ progress::-moz-progress-bar {
   gap: 15px;
   align-items: center;
 }
-.shop-card > img {
+.shop-card > img,
+.shop-card > svg {
   width: 40%;
   max-width: 160px;
 }
@@ -2384,7 +2385,8 @@ legend span {
     gap: 12px;
     flex-direction: column;
   }
-  .shop-card > img {
+  .shop-card > img,
+.shop-card > svg {
     width: 85%;
     max-width: 230px;
     height: 105px;
@@ -2499,4 +2501,24 @@ legend span {
     transition: none !important;
     scroll-behavior: auto !important;
   }
+}
+
+.apparatus-art {
+  display: block;
+  height: auto;
+}
+.apparatus-card .apparatus-art {
+  width: 100%;
+  margin: 10px 0;
+}
+.shop-groups {
+  display: grid;
+  gap: 18px;
+}
+.shop-group {
+  margin: 18px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0.7;
 }
