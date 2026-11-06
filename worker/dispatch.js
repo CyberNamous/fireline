@@ -25,11 +25,11 @@ export async function dispatch(env, player, request, data) {
   );
   requireThat(vehicle, 'Vehicle not found.', 404);
   requireThat(
-    event.types.includes(vehicle.type),
+    event.types.includes(VEHICLES[vehicle.type]?.kind),
     'This vehicle is not suitable for this incident.'
   );
   requireThat(
-    data.crewIds.length <= VEHICLES[vehicle.type].crew,
+    data.crewIds.length <= (VEHICLES[vehicle.type]?.crew ?? 0),
     'Too many crew for this vehicle.'
   );
   const crew = await all(

@@ -92,7 +92,7 @@ export async function organizationAction(env, player, request, data) {
         entityId,
         player.id,
         data.type,
-        `${data.type.toUpperCase()} ${String(n.n + 1).padStart(2, '0')}`,
+        `${spec.callsign} ${String(n.n + 1).padStart(2, '0')}`,
         t,
         ...params
       )
