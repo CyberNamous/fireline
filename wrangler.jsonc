@@ -3,12 +3,12 @@
   "name": "fireline-volunteer-chief",
   "main": "worker/index.js",
   "compatibility_date": "2026-11-06",
-  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": true },
+  "assets": { "directory": "./dist", "binding": "ASSETS" },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "fireline",
-      "database_id": "65909c03-40e3-4879-8bf7-bab92133e121"
+      "database_id": "00000000-0000-0000-0000-000000000000"
     }
   ],
   "ratelimits": [
