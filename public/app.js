@@ -338,7 +338,8 @@ function estimate(incident, vehicle, crew) {
         0.74 +
           skill * 0.045 -
           (incident.severity - 1) * 0.045 +
-          (vehicle.type === 'brush' && incident.key === 'brush' ? 0.09 : 0)
+          (spec.fit?.[incident.key] ?? 0) +
+          (incident.water ? Math.min(0.12, spec.liters / 100000) : 0)
       ) * 100
     )
   };
@@ -347,7 +348,8 @@ function planDispatch(id) {
   const incident = state.incidents.find((i) => i.id === id);
   if (!incident) return toast('This incident has already cleared.', true);
   const ready = state.vehicles.filter(
-      (v) => incident.types.includes(v.type) && v.busy_until <= serverNow()
+      (v) =>
+        incident.types.includes(state.catalog.vehicles[v.type]?.kind) && v.busy_until <= serverNow()
     ),
     crew = state.volunteers.filter((v) => v.busy_until <= serverNow());
   openModal(

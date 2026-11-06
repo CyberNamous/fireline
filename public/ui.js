@@ -7,6 +7,15 @@ export const escape = (value) =>
   );
 export const icon = (name, cls = '') =>
   `<img class="icon ${cls}" src="/public/assets/icons/${name}.svg" alt="">`;
+const KIND_ORDER = ['ambulance', 'engine', 'brush', 'rescue', 'tanker', 'aerial'],
+  KIND_LABEL = {
+    ambulance: 'Ambulances (EMS)',
+    engine: 'Pumper engines',
+    brush: 'Wildland units',
+    rescue: 'Rescue units',
+    tanker: 'Water tenders',
+    aerial: 'Aerial apparatus'
+  };
 export const money = (n) =>
   new Intl.NumberFormat('en-PH', {
     style: 'currency',
@@ -102,15 +111,16 @@ export function volunteersView(s, t) {
 }
 export function fleetView(s, t) {
   const cap = s.catalog.capacities.vehicles;
-  return `<div class="section-heading"><div><h2>Ready to roll.</h2><p class="muted">${s.vehicles.length} / ${cap} apparatus bays occupied · All units return automatically.</p></div><span class="pill gold-pill">Tier ${s.organization.station_level} station</span></div><div class="fleet-grid">${s.vehicles.map((v) => `<article class="panel apparatus-card"><div class="split"><p class="eyebrow">${escape(v.name)}</p><span class="pill ${v.busy_until > t ? 'gold-pill' : 'teal-pill'}">${v.busy_until > t ? 'In service' : 'Ready'}</span></div><img class="vehicle-image" src="/public/assets/images/${v.type}.svg" alt="${escape(s.catalog.vehicles[v.type].name)}"><h3>${escape(s.catalog.vehicles[v.type].name)}</h3><p class="muted">${escape(s.catalog.vehicles[v.type].description)}</p><div class="capacity-row"><span>Crew seats</span><strong>${s.catalog.vehicles[v.type].crew}</strong></div>${v.busy_until > t ? `<p class="gold">Returning in <span data-due="${v.busy_until}">${duration(v.busy_until - t)}</span></p>` : '<p class="teal-text">Available for compatible incidents</p>'}</article>`).join('')}</div><div class="section-heading shop-heading"><h2>Expand your response</h2><span class="subtle">APPARATUS CATALOG</span></div><div class="shop-grid">${Object.entries(
-    s.catalog.vehicles
-  )
-    .map(([type, v]) => {
-      const locked = s.catalog.progression.level < v.minLevel,
-        full = s.vehicles.length >= cap;
-      return `<article class="panel shop-card"><img src="/public/assets/images/${type}.svg" alt="${escape(v.name)}"><div><span class="eyebrow">LEVEL ${v.minLevel} · ${v.crew} CREW</span><h3>${escape(v.name)}</h3><p class="muted">${escape(v.description)}</p><button class="button secondary full" data-purchase="${type}" ${locked || full || s.player.balance - s.catalog.responseReserve < v.price ? 'disabled' : ''}>${locked ? `Unlocks at level ${v.minLevel}` : full ? 'Expand station to add a bay' : `Acquire · ${money(v.price)}`}</button></div></article>`;
-    })
-    .join('')}</div>`;
+  return `<div class="section-heading"><div><h2>Ready to roll.</h2><p class="muted">${s.vehicles.length} / ${cap} apparatus bays occupied · All units return automatically.</p></div><span class="pill gold-pill">Tier ${s.organization.station_level} station</span></div><div class="fleet-grid">${s.vehicles.map((v) => `<article class="panel apparatus-card"><div class="split"><p class="eyebrow">${escape(v.name)}</p><span class="pill ${v.busy_until > t ? 'gold-pill' : 'teal-pill'}">${v.busy_until > t ? 'In service' : 'Ready'}</span></div><img class="vehicle-image" src="/public/assets/images/${v.type}.svg" alt="${escape(s.catalog.vehicles[v.type].name)}"><h3>${escape(s.catalog.vehicles[v.type].name)}</h3><p class="muted">${escape(s.catalog.vehicles[v.type].description)}</p><div class="capacity-row"><span>Crew seats</span><strong>${s.catalog.vehicles[v.type].crew}</strong></div>${v.busy_until > t ? `<p class="gold">Returning in <span data-due="${v.busy_until}">${duration(v.busy_until - t)}</span></p>` : '<p class="teal-text">Available for compatible incidents</p>'}</article>`).join('')}</div><div class="section-heading shop-heading"><h2>Expand your response</h2><span class="subtle">APPARATUS CATALOG</span></div><div class="shop-groups">${KIND_ORDER.map((kind) => {
+    const items = Object.entries(s.catalog.vehicles).filter(([, v]) => v.kind === kind);
+    return `<h3 class="shop-group">${KIND_LABEL[kind]}</h3><div class="shop-grid">${items
+      .map(([type, v]) => {
+        const locked = s.catalog.progression.level < v.minLevel,
+          full = s.vehicles.length >= cap;
+        return `<article class="panel shop-card"><img src="/public/assets/images/${type}.svg" alt="${escape(v.name)}" loading="lazy"><div><span class="eyebrow">LEVEL ${v.minLevel} · ${v.crew} CREW${v.liters ? ` · ${v.liters.toLocaleString('en-US')} L` : ''}</span><h3>${escape(v.name)}</h3><p class="muted">${escape(v.description)}</p><button class="button secondary full" data-purchase="${type}" ${locked || full || s.player.balance - s.catalog.responseReserve < v.price ? 'disabled' : ''}>${locked ? `Unlocks at level ${v.minLevel}` : full ? 'Expand station to add a bay' : `Acquire · ${money(v.price)}`}</button></div></article>`;
+      })
+      .join('')}</div>`;
+  }).join('')}</div>`;
 }
 export function financesView(s) {
   const income = s.ledger.filter((e) => e.amount > 0).reduce((a, e) => a + e.amount, 0),

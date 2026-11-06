@@ -1317,8 +1317,7 @@ progress::-moz-progress-bar {
   gap: 15px;
   align-items: center;
 }
-.shop-card > img,
-.shop-card > svg {
+.shop-card > img {
   width: 40%;
   max-width: 160px;
 }
@@ -1562,6 +1561,20 @@ textarea {
 }
 .form-error:empty {
   display: none;
+}
+.recovery-code {
+  display: block;
+  word-break: break-all;
+  padding: 19px;
+  border: 1px dashed #9a8458;
+  background: #34332a;
+  color: #ebd5a9;
+  border-radius: 6px;
+  margin-top: 20px;
+  font:
+    14px ui-monospace,
+    monospace;
+  line-height: 1.9;
 }
 .guide .lede {
   font-size: 17px;
@@ -2385,8 +2398,7 @@ legend span {
     gap: 12px;
     flex-direction: column;
   }
-  .shop-card > img,
-.shop-card > svg {
+  .shop-card > img {
     width: 85%;
     max-width: 230px;
     height: 105px;
@@ -2503,14 +2515,6 @@ legend span {
   }
 }
 
-.apparatus-art {
-  display: block;
-  height: auto;
-}
-.apparatus-card .apparatus-art {
-  width: 100%;
-  margin: 10px 0;
-}
 .shop-groups {
   display: grid;
   gap: 18px;
